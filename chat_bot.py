@@ -31,6 +31,28 @@ class StartPoint():
         else:
             return False
 
+    def acceptance(data):
+        if len(data.split(' '))>50 or len(data)<1:
+            return False
+        elif len(data)>1000:
+            return False
+        elif data == '[deleted]' or data == '[removed]':
+            return False
+        else:
+            return True
+
+    def transaction_builder(sql):
+        global sql_transaction
+        sql_tranaction.append(sql)
+        if len(sql_transaction)>1000:
+            c.execute('TRANSACTION')
+            for x in sql_transaction:
+                c.execute(s)
+                connection.commit()
+                sql_transaction = []
+                
+        
+
     def get_parent(p_id):
         sql = "SELECT comment FROM parent_reply WHERE comment_id = '{}' LIMIT 1".format{p_iid}
         c.execute(sql)
@@ -39,6 +61,12 @@ class StartPoint():
             return result[0]
         else:
             return False
+
+    def sql_insert_replace_comment(comment_id, parent_id, parent, comment, subdata, created_utc, score):
+        sql = """UPDATE parent_reply SET parent_id = ?, comment_id = ?, parent = ?, comment = ?, subdata = ?,
+            created_utc = ?, score = ? WHERE parent_id == ?""".format(comment_id, parent_id, parent, comment,
+                                                                      subdata, created_utc, score)
+        transaction_builder(sql)
 
     def get_action():
         row_counter = 0
@@ -57,9 +85,16 @@ class StartPoint():
                 print_data = get_parent(parent_id)
 
                 if score >= 2:
-                    comment_score = find_existing_score(parent_id)
-                    if comment_score:
-                        if score > comment_score:
+                    if acceptance(body):
+                        comment_score = find_existing_score(parent_id)
+                        if comment_score:
+                            if score > comment_score:
+                                sql_insert_replace_comment(comment_id, parent_id, parent_data, body, subdata, created_utc, score)
+                        else:
+                            if parent_data:
+                                sql_insert_has_parent(comment_id, parent_id, parent_data, body, subdata, created_utc, score)
+                            else:
+                                sql_insert_no_parent(comment_id, parent_id, parent_data, body, subdata, created_utc, score)
                             
                 
 
